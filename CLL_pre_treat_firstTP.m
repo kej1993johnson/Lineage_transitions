@@ -125,6 +125,52 @@ title('t=96h ordered by t=0h')
 ylim([0 0.1])
 xlim([0, num_bcds])
 set(gca,'FontSize',20,'LineWidth',1.5, 'YScale', 'log')
+%% Order by abundance
+figure;
+subplot(3,1,1)
+bar(1:1:num_bcds, (bcdabundcons(:,1)))
+xlabel('barcode')
+ylabel('abundance')
+title('t=0h barcode abundance distribution')
+ylim([0 0.1])
+xlim([0, num_bcds])
+set(gca,'FontSize',20,'LineWidth',1.5, 'YScale', 'log')
+
+subplot(3,1,2)
+bar(1:1:num_bcds, (bcdabundcons(rankt2,2)))
+xlabel('barcode')
+ylabel('abundance')
+title('t=48h ordered by abundance')
+ylim([0 0.1])
+xlim([0, num_bcds])
+set(gca,'FontSize',20,'LineWidth',1.5, 'YScale', 'log')
+
+subplot(3,1,3)
+bar(1:1:num_bcds, (bcdabundcons(rankt3,3)))
+xlabel('barcode')
+ylabel('abundance')
+title('t=96h ordered by abundance')
+ylim([0 0.1])
+xlim([0, num_bcds])
+set(gca,'FontSize',20,'LineWidth',1.5, 'YScale', 'log')
+%% Overlaid
+
+figure;
+bar(1:1:num_bcds, (bcdabundcons(:,1)))
+hold on
+bar(1:1:num_bcds, (bcdabundcons(rankt2,2)))
+bar(1:1:num_bcds, (bcdabundcons(rankt3,3)))
+xlabel('barcode')
+ylabel('abundance')
+title('Barcode Abundance at each time point')
+legend('t=0h', 't=48h', 't=96h')
+legend boxoff
+ylim([0 0.1])
+xlim([0, num_bcds])
+set(gca,'FontSize',20,'LineWidth',1.5, 'YScale', 'log')
+
+%%
+
 
 % make this into a 3 column heat map with barcode on the y-axis and time
 % point on the x axis, colored by bcdabundance.

@@ -113,7 +113,7 @@ for i = 1:nsubpops
     sigma = 1e4; % add a little uncertainty to initial condition
     [p, modelfitg] = fit_logistic(CLLdata(i).Nmean, tdata, sigma, Kglob);
     CLLdata(i).g = p(1);
-    CLLdata(i).modelfitg = modelfit;
+    CLLdata(i).modelfitg = modelfitg;
 end
 figure;
 for i = 1:nsubpops
@@ -164,6 +164,12 @@ for i = 1:nsubpops
         ylim([0 1e8])
         
 end
+
+
+% Save the carrying capacity for the untreated control to be loaded in
+Kunt = CLLdata(1).gandK(2);
+save('../out/KuntCLLT25.mat', 'Kunt')
+
 %% Make a bar graph of the growth rates for each one
 
 for i = 1:nsubpops
@@ -210,3 +216,99 @@ set(gca,'FontSize',20,'LineWidth',1.5)
 xlabel('sample')
 ylabel('fit for K')
 title('Individually fit K')
+%% Consider cutting off the data and setting K and fitting
+
+for i = 1:nsubpops
+    
+    sigmavec = CLLdata(i).Nstd(1:7);
+    sigmavec(1) = 1e4;
+    sigma = 1e4; % add a little uncertainty to initial condition
+    [p, modelfitg] = fit_logistic(CLLdata(i).Nmean(1:7), tdata(1:7), sigma, Kglob);
+    CLLdata(i).gshort = p(1);
+    CLLdata(i).modelfitshort = modelfitg;
+end
+figure;
+for i = 1:nsubpops
+    subplot(1, nsubpops, i)
+      errorbar(CLLdata(i).time(1:7), CLLdata(i).Nmean(1:7),1.96*CLLdata(i).Nstd(1:7), '*', 'color', CLLdata(i).color, 'LineWidth', 2)
+         hold on
+         plot(CLLdata(i).time(1:7), CLLdata(i).modelfitshort, '-', 'color', CLLdata(i).color, 'LineWidth', 2) 
+         %text(CLLdata(i).time(end-2), CLLdata(i).modelfit(end-2), ['g=', num2str(CLLdata(i).gfit)])
+         %plot(CLLdata(i).time, CLLdata(i).Nmean + 1.96*CLLdata(i).Nstd, 'color', CLLdata(i).color)
+         %plot(CLLdata(i).time, CLLdata(i).Nmean - 1.96*CLLdata(i).Nstd, 'color', CLLdata(i).color)
+        xlabel('time (hours)')
+        ylabel('N(t)')
+        title(['g=', num2str(CLLdata(i).gshort)])
+        set(gca,'FontSize',20,'LineWidth',1.5)
+        xlim([tdata(1) tdata(7)])
+        legend(sampsnames(i), 'Location', 'NorthWest')
+        legend boxoff
+        ylim([0 6e7])
+        
+end
+%%  Plot fit to first few time points
+for i = 1:nsubpops
+gshorti(i) = CLLdata(i).gshort;
+end
+xvals = 1:1:nsubpops;
+figure;
+for i = 1:nsubpops
+bar(xvals(i),gshorti(i), 'facecolor', CLLdata(i).color)
+hold on
+end
+set(gca,'XTick',1:8)
+set(gca,'XTickLabel',sampsnames)
+set(gca,'FontSize',20,'LineWidth',1.5)
+xlabel('sample')
+ylabel('growth rate from shortened data set')
+title('Growth rate with shortened data')
+%% Fit each inidividual trajectory from shortened time points
+for i = 1:nsubpops
+    sigmavec(1) = 1e4;
+    sigma = 1e4; % add a little uncertainty to initial condition
+    for j = 1:3
+    [gi, modelfiti] = fit_logistic(CLLdata(i).rawN(1:7, j), tdata(1:7), sigma, Kglob);
+    gall(j)= gi;
+    modelfits(:,j)= modelfiti;
+    end
+    CLLdata(i).gall = gall;
+    CLLdata(i).modelfitall = modelfits;
+end
+figure;
+for i = 1:nsubpops
+    subplot(1, nsubpops, i)
+    for j = 1:3
+      plot(CLLdata(i).time(1:7), CLLdata(i).rawN(1:7,j), '*', 'color', CLLdata(i).color, 'LineWidth', 2)
+         hold on
+        plot(CLLdata(i).time(1:7), CLLdata(i).modelfitall(:,j), '-', 'color', CLLdata(i).color, 'LineWidth', 2) 
+    end 
+        %text(CLLdata(i).time(end-2), CLLdata(i).modelfit(end-2), ['g=', num2str(CLLdata(i).gfit)])
+         %plot(CLLdata(i).time, CLLdata(i).Nmean + 1.96*CLLdata(i).Nstd, 'color', CLLdata(i).color)
+         %plot(CLLdata(i).time, CLLdata(i).Nmean - 1.96*CLLdata(i).Nstd, 'color', CLLdata(i).color)
+        xlabel('time (hours)')
+        ylabel('N(t)')
+        %title(['g=', num2str(CLLdata(i).gshort)])
+        set(gca,'FontSize',20,'LineWidth',1.5)
+        xlim([tdata(1) tdata(7)])
+        legend(sampsnames(i), 'Location', 'NorthWest')
+        legend boxoff
+        ylim([0 6e7])
+        
+end
+%%
+figure;
+for i = 1:nsubpops
+    noise =0.1*(0.5-rand(3,1));
+    plot((noise+i), CLLdata(i).gall, '*', 'color', CLLdata(i).color, 'LineWidth', 4)
+    hold on
+end
+set(gca,'XTick',1:7)
+set(gca,'XTickLabel',sampsnames)
+set(gca,'FontSize',20,'LineWidth',1.5)
+xlabel('sample')
+ylabel('growth rate')
+title('Individual growth rate estimates ')
+%% Save the data structure
+% this saves the fitted data structure, obtained from the raw data
+% structure (run load_raw_data.m)
+save('../out/CLLdatagrowth.mat', 'CLLdata')

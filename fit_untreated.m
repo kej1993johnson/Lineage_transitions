@@ -31,7 +31,7 @@ modelfun1 = @(p)simmodellog(p, ytime, N0); % single exponential model with carry
 
     % INITIAL GUESSES BASED ON DATA
 
-    gguess = (yfxform(ydata(4))-yfxform(ydata(1)))/(ytime(4)-ytime(1)); 
+    gguess = (yfxform(ydata(3))-yfxform(ydata(1)))/(ytime(3)-ytime(1)); 
     % alter initial guesses to prevent NaNs and zeros
     Kguess = ydata(end);
     if isnan(gguess)
