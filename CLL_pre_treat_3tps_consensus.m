@@ -12,6 +12,7 @@
 % CD18 cells = 431,200 % sensitive
 % CXCR4 cells = 71,867 % resistant
 
+
 close all; clear all; clc
 %% Load in OG and TPO barcode frequency distribution
 [N, T]= xlsread('../data/Barcode_sampling_pre_treat.xlsx');
@@ -139,6 +140,19 @@ for i = 1:num_bcds
 end
 
 pct_CXCR4pos = ct_CXCR4pos/num_bcds
+%% Export a table of barcode abundance
+barcodes = [];
+CXCR4hi = [];
+CD18hi = [];
+for i = 1:length(bcd)
+barcodes = vertcat(barcodes, bcd(i).barcode);
+CXCR4hi = vertcat(CXCR4hi, bcd(i).CXCR4pos);
+CD18hi = vertcat(CD18hi,bcd(i).CD18pos);
+end
+
+T2 = table(barcodes, CXCR4hi, CD18hi);
+
+writetable(T2, '../out/barcodes_CXCR4_CD18.csv')
 %% Plot the CD18 ratio
 CD18ratio(isinf(CD18ratio))=1000;
 figure;
@@ -466,7 +480,7 @@ for i = 1:10
     legend('data','fit', 'Location', 'Northwest')
     legend boxoff
     title(['g=', num2str(round(bcd(i).g,4))])
-    pause
+    
 end
 
 %% Plot growth rate distribution
@@ -537,9 +551,9 @@ hold on
 bar(barcodesneg, gdistribneg, 'b', 'FaceAlpha', 0.4)
 xlabel ('barcodes')
 ylabel('Fitted growth rate')
-legend('CXCR4+ lineages', 'CD18+ lineages')
+legend('CXCR4^{hi} lineages', 'CD18^{hi} lineages')
 legend boxoff
-title('Growth rate distribution stratified by CXCR4')
+%title('Growth rate distribution stratified by CXCR4')
 set(gca,'FontSize',20,'LineWidth',1.5)
 
 %% Stratified dot plot
@@ -560,7 +574,8 @@ set(gca,'FontSize',20,'LineWidth',1.5,'XTickLabel',{'CD18+','CXCR4+'})
 group = [ 0*ones(size(gdistribneg)); ones(size(gdistribpos))];
 figure;
 boxplot([gdistribneg; gdistribpos],group)
-set(gca,'FontSize',20,'LineWidth',1.5,'XTickLabel',{'CD18+','CXCR4+'})
+set(gca,'TickLabelInterpreter', 'tex');
+set(gca,'FontSize',20,'LineWidth',1.5,'XTickLabel',{'CD18^{hi}','CXCR4^{hi}'})
 ylabel('growth rate')
 
 
@@ -583,11 +598,11 @@ figure;
 histogram(greslist,edgeshist, 'Normalization', 'probability', 'FaceColor', 'r')
 hold on
 histogram(gsenslist, edgeshist, 'Normalization', 'probability', 'FaceColor', 'b', 'FaceAlpha', 0.4)
-legend('CXCR4+', 'CD18+')
+legend('CXCR4^{hi}', 'CD18^{hi}')
 legend boxoff
 xlabel('growth rate')
 ylabel('frequency')
-title('Growth rate distributions CXCR4+ & CD18+')
+%title('Growth rate distributions CXCR4+ & CD18+')
 set(gca,'FontSize',20,'LineWidth',1.5)
 
 
@@ -685,8 +700,12 @@ end
 CXCR4abund_t(1,:) = 1-CXCR4abund_t(2,:);
 figure;
 bar(CXCR4abund_t', 'stacked')
-set(gca, 'FontSize', 14', 'XTickLabel', xlabs)
-legend('CD18+', 'CXCR4+')
+set(gca, 'FontSize', 16, 'XTickLabel', xlabs)
+legend('CD18^{hi}', 'CXCR4^{hi}')
+
+TCXCR4=table(CXCR4abund_t);
+
+writetable(TCXCR4, '../out/prop_CXCR4lowpretreat.csv')
 %%
 figure;
 plot([ 0 48 96], CXCR4abund_t(2,:), 'r*-','LineWidth', 3)
@@ -695,7 +714,7 @@ plot([ 0 48 96], 1-CXCR4abund_t(2,:),'b*-', 'LineWidth', 3)
 set(gca, 'FontSize', 14)
 xlabel ('Time (hours)')
 ylabel('Abundance')
-legend('CXCR4+', 'CD18+')
+legend('CXCR4^{hi}', 'CD18^{hi}')
 legend boxoff
 ylim([ 0 1.1])
 xlim([-10 106])
