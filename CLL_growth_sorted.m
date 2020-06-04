@@ -1,35 +1,20 @@
-% Growth analysis of isolated subpopulations of CLL cells
-
-% This script loads in the CLL growth rate data of the followign isolated
-% populations:
-
-% TPO (8 days post thaw, t=0 for scRNAseq)
-% TP0 CD18+ (cells from this TP0 population sorted into by high CD18 
-% expression levels)
-% TP0 CXCR4 (cells from TP0 sorted by high CXCR4 levels (thought to be high
-% tolerance)
-% FM1 (cells post fluderamine treatment from sample 1)
-% FM1 CD18 (cells post fluderamine treatment sorted for high CD18)
-% FM1 CXCR4 (cells from fluderamine treatment sorted for high CXCR4)
-% FM7 another sample of cells post fluderamine treatment ?
+% Load in CLL untreated sorted growth data from March 20th, 2020
 close all; clear all; clc;
-%[growth_data, T]= xlsread('../data/CLL_growth_data.xlsx');
-% Load 
 [growth_data, T]= xlsread('../data/CLL_growth_3_20.xlsx');
 
 %% Adjust the data
 tdata = growth_data(:,1); % this is in hours
 % cell numbers should be in millions
 N_cells = growth_data(:,2:end).*1e6;
-nsubpops = 7;
+nsubpops = 3;
 %% Make a data structure that holds each of samples
 ntps = length(tdata);
 CLLdata = struct('time', zeros(ntps,1), 'rawN', zeros(ntps,3), 'sample', strings(1,1),...
         'Nmean', zeros(ntps,1), 'Nstd', zeros(ntps,1));
     
 % Go through and add each sample
-sampsnames = {'TP0', 'TP0 CD18+', 'TP0 CXCR4+', 'FM1', 'FM1 CD18+', 'FM1 CXR4+', 'FM7'};
-colorsets = varycolor(nsubpops); % give each sample a unique color (for plotting)
+sampsnames = {'TP0', 'TP0 CD18+', 'TP0 CXCR4+'};
+colorsets = [0 0 0; 0 0 1; 1 0 0]; % give each sample a unique color (for plotting)
 for i = 1:nsubpops
     CLLdata(i).time = tdata;
     CLLdata(i).sample = sampsnames(i);
@@ -108,7 +93,6 @@ plot(tdata, singexpmodel, 'k-')
 xlabel('time(hours)')
 ylabel('Global fit for best K')
 set(gca,'FontSize',20,'LineWidth',1.5)
-
 %% Set K and fit for g
 %K = 15e7;
 for i = 1:nsubpops
@@ -146,6 +130,7 @@ for i = 1:nsubpops
     [p, modelfit] = fit_untreated(CLLdata(i).Nmean, tdata, sigma);
     CLLdata(i).gandK = p;
     CLLdata(i).modelfitwithk = modelfit;
+    CLLdata(i).doublingtime = log(2)./p(1)
 end
 
 figure;
@@ -159,7 +144,7 @@ for i = 1:nsubpops
          %plot(CLLdata(i).time, CLLdata(i).Nmean - 1.96*CLLdata(i).Nstd, 'color', CLLdata(i).color)
         xlabel('time (hours)')
         ylabel('N(t)')
-        title(['g=', num2str(round(CLLdata(i).gandK(1),4))])%,'K=', num2str(CLLdata(i).gandK(2))])
+        title(['g=', num2str(round(CLLdata(i).gandK(1),4)), ', t_{double}=', num2str(CLLdata(i).doublingtime),' hrs'])%,'K=', num2str(CLLdata(i).gandK(2))])
         set(gca,'FontSize',20,'LineWidth',1.5)
         xlim([tdata(1) tdata(end)])
         legend(sampsnames(i), 'Location', 'NorthWest')
@@ -167,151 +152,42 @@ for i = 1:nsubpops
         ylim([0 1e8])
         
 end
-
-
-% Save the carrying capacity for the untreated control to be loaded in
-Kunt = CLLdata(1).gandK(2);
-save('../out/KuntCLLT25.mat', 'Kunt')
-
-%% Make a bar graph of the growth rates for each one
-
+%% Fit each replicate individually for g and k
 for i = 1:nsubpops
-galone(i) = CLLdata(i).g;
-gwithk(i) = CLLdata(i).gandK(1);
-Ki(i) =CLLdata(i).gandK(2);
-end
-xvals = 1:1:nsubpops;
-figure;
-for i = 1:nsubpops
-bar(xvals(i),galone(i), 'facecolor', CLLdata(i).color)
-hold on
-end
-set(gca,'XTickLabel',sampsnames)
-set(gca,'XTick',8)
-set(gca,'FontSize',20,'LineWidth',1.5)
-xlabel('sample')
-ylabel('growth rate with set K')
-title('Growth rate comparisons with set K')
-
-figure;
-for i = 1:nsubpops
-bar(xvals(i),gwithk(i), 'facecolor', CLLdata(i).color)
-hold on
-end
-set(gca,'XTick',1:7)
-set(gca,'XTickLabel',sampsnames)
-set(gca,'FontSize',20,'LineWidth',1.5)
-xlabel('sample')
-ylabel('growth rate when fitting K')
-title('Growth rate comparisons with individually fit K')
-%%
-allnames = horzcat(sampsnames, 'global K')
-
-figure;
-for i = 1:nsubpops
-bar(xvals(i),Ki(i), 'facecolor', CLLdata(i).color)
-hold on
-bar(8, Kglob)
-end
-set(gca,'XTick',1:8)
-set(gca,'XTickLabel',allnames)
-set(gca,'FontSize',20,'LineWidth',1.5)
-xlabel('sample')
-ylabel('fit for K')
-title('Individually fit K')
-%% Consider cutting off the data and setting K and fitting
-
-for i = 1:nsubpops
-    
-    sigmavec = CLLdata(i).Nstd(1:7);
-    sigmavec(1) = 1e4;
-    sigma = 1e4; % add a little uncertainty to initial condition
-    [p, modelfitg] = fit_logistic(CLLdata(i).Nmean(1:7), tdata(1:7), sigma, Kglob);
-    CLLdata(i).gshort = p(1);
-    CLLdata(i).modelfitshort = modelfitg;
-end
-figure;
-for i = 1:nsubpops
-    subplot(1, nsubpops, i)
-      errorbar(CLLdata(i).time(1:7), CLLdata(i).Nmean(1:7),1.96*CLLdata(i).Nstd(1:7), '*', 'color', CLLdata(i).color, 'LineWidth', 2)
-         hold on
-         plot(CLLdata(i).time(1:7), CLLdata(i).modelfitshort, '-', 'color', CLLdata(i).color, 'LineWidth', 2) 
-         %text(CLLdata(i).time(end-2), CLLdata(i).modelfit(end-2), ['g=', num2str(CLLdata(i).gfit)])
-         %plot(CLLdata(i).time, CLLdata(i).Nmean + 1.96*CLLdata(i).Nstd, 'color', CLLdata(i).color)
-         %plot(CLLdata(i).time, CLLdata(i).Nmean - 1.96*CLLdata(i).Nstd, 'color', CLLdata(i).color)
-        xlabel('time (hours)')
-        ylabel('N(t)')
-        title(['g=', num2str(CLLdata(i).gshort)])
-        set(gca,'FontSize',20,'LineWidth',1.5)
-        xlim([tdata(1) tdata(7)])
-        legend(sampsnames(i), 'Location', 'NorthWest')
-        legend boxoff
-        ylim([0 6e7])
-        
-end
-%%  Plot fit to first few time points
-for i = 1:nsubpops
-gshorti(i) = CLLdata(i).gshort;
-end
-xvals = 1:1:nsubpops;
-figure;
-for i = 1:nsubpops
-bar(xvals(i),gshorti(i), 'facecolor', CLLdata(i).color)
-hold on
-end
-set(gca,'XTick',1:8)
-set(gca,'XTickLabel',sampsnames)
-set(gca,'FontSize',20,'LineWidth',1.5)
-xlabel('sample')
-ylabel('growth rate from shortened data set')
-title('Growth rate with shortened data')
-%% Fit each inidividual trajectory from shortened time points
-for i = 1:nsubpops
-    sigmavec(1) = 1e4;
-    sigma = 1e4; % add a little uncertainty to initial condition
+    sigma = 1e4;
+    gset = [];
     for j = 1:3
-    [gi, modelfiti] = fit_logistic(CLLdata(i).rawN(1:7, j), tdata(1:7), sigma, Kglob);
-    gall(j)= gi;
-    modelfits(:,j)= modelfiti;
+        Ni = [];
+        tvec = [];
+        Ni = CLLdata(i).rawN(~isnan(CLLdata(i).rawN(:,j)),j);
+        tvec = CLLdata(i).time(~isnan(CLLdata(i).rawN(:,j)));
+    [pi, modelfiti] = fit_untreated(Ni,tvec, sigma);
+    gset(j) = pi(1)
     end
-    CLLdata(i).gall = gall;
-    CLLdata(i).modelfitall = modelfits;
+    CLLdata(i).gset = gset;
 end
+% CXCR4 vs CD18 stat significant?
+[h,p1] = ttest2(CLLdata(2).gset, CLLdata(3).gset)
+% Are TP0 bulk and CD18 stat significant different?
+[h,p2] = ttest2(CLLdata(1).gset, CLLdata(2).gset)
+% Are TP0 bulk and CXCR4 stat significant differetn?
+[h,p3] = ttest2(CLLdata(1).gset, CLLdata(3).gset)
+
+%% figure to emulate Cathy's
 figure;
-for i = 1:nsubpops
-    subplot(1, nsubpops, i)
-    for j = 1:3
-      plot(CLLdata(i).time(1:7), CLLdata(i).rawN(1:7,j), '*', 'color', CLLdata(i).color, 'LineWidth', 2)
-         hold on
-        plot(CLLdata(i).time(1:7), CLLdata(i).modelfitall(:,j), '-', 'color', CLLdata(i).color, 'LineWidth', 2) 
-    end 
-        %text(CLLdata(i).time(end-2), CLLdata(i).modelfit(end-2), ['g=', num2str(CLLdata(i).gfit)])
-         %plot(CLLdata(i).time, CLLdata(i).Nmean + 1.96*CLLdata(i).Nstd, 'color', CLLdata(i).color)
-         %plot(CLLdata(i).time, CLLdata(i).Nmean - 1.96*CLLdata(i).Nstd, 'color', CLLdata(i).color)
-        xlabel('time (hours)')
-        ylabel('N(t)')
-        %title(['g=', num2str(CLLdata(i).gshort)])
-        set(gca,'FontSize',20,'LineWidth',1.5)
-        xlim([tdata(1) tdata(7)])
-        legend(sampsnames(i), 'Location', 'NorthWest')
-        legend boxoff
-        ylim([0 6e7])
-        
-end
-%%
-figure;
-for i = 1:nsubpops
-    noise =0.1*(0.5-rand(3,1));
-    plot((noise+i), CLLdata(i).gall, '*', 'color', CLLdata(i).color, 'LineWidth', 4)
-    hold on
-end
-set(gca,'XTick',1:7)
-set(gca,'XTickLabel',sampsnames)
+errorbar(CLLdata(1).time, CLLdata(1).Nmean,1.96*CLLdata(1).Nstd, '*', 'color', CLLdata(1).color, 'LineWidth', 2)
+ hold on
+errorbar(CLLdata(2).time, CLLdata(2).Nmean,1.96*CLLdata(2).Nstd, '*', 'color', CLLdata(2).color, 'LineWidth', 2)
+errorbar(CLLdata(3).time, CLLdata(3).Nmean,1.96*CLLdata(3).Nstd, '*', 'color', CLLdata(3).color, 'LineWidth', 2)
+plot(CLLdata(1).time, CLLdata(1).modelfitwithk, '-', 'color', CLLdata(1).color, 'LineWidth', 2) 
+plot(CLLdata(2).time, CLLdata(2).modelfitwithk, '-', 'color', CLLdata(2).color, 'LineWidth', 2) 
+plot(CLLdata(3).time, CLLdata(3).modelfitwithk, '-', 'color', CLLdata(3).color, 'LineWidth', 2) 
+xlabel('time (hours)')
+ylabel('N(t)')
+title( 'TP0')
+%title(['g=', num2str(round(CLLdata(i).gandK(1),2)), ', t_{double}=', num2str(round(CLLdata(i).doublingtime),3),' hrs'])%,'K=', num2str(CLLdata(i).gandK(2))])
 set(gca,'FontSize',20,'LineWidth',1.5)
-xlabel('sample')
-ylabel('growth rate')
-title('Individual growth rate estimates ')
-%% Save the data structure
-% this saves the fitted data structure, obtained from the raw data
-% structure (run load_raw_data.m)
-save('../out/CLLdatagrowth.mat', 'CLLdata')
+xlim([tdata(1) tdata(end)])
+legend('TP0 t_{double} = 24 hrs', 'TP0 CD18^{hi} t_{double} = 31 hrs', 'TP0 CXCR4^{hi} t_{double} = 19 hrs', 'Location', 'NorthWest')
+legend boxoff
+ylim([0 1.2e8])

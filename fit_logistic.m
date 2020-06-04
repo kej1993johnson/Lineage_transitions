@@ -31,7 +31,7 @@ modelfun1 = @(p)simmodellogistic(p, K, ytime, N0); % single exponential model wi
 
     % INITIAL GUESSES BASED ON DATA
 
-    gguess = (yfxform(ydata(end))-yfxform(ydata(end-5)))/(ytime(end)-ytime(end-5)); 
+    gguess = (yfxform(ydata(end))-yfxform(ydata(end-3)))/(ytime(end)-ytime(end-3)); 
     % alter initial guesses to prevent NaNs and zeros
     if isnan(gguess)
         gguess = 1e-5;
